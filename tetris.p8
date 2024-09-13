@@ -12,7 +12,7 @@ function _init()
 	tts_x_spd=0
 	tts_y_spd=0
 	
-	nxt_pc=build_tetris()
+	nxt_pc=build_tetris(b_types[flr(rnd(6)+1)])
 end
 
 function _update()
@@ -33,30 +33,15 @@ function _draw()
 	
 	draw_tetris(nxt_pc)
 	draw_ui()
-	block_map()
 end
 -->8
 --update
-function build_tetris()	
+function build_tetris(pc)	
 	local blocks={}
 	
-	add(blocks,build_blk(4,-14))
-	add(blocks,build_blk(11,-14))
-	add(blocks,build_blk(18,-14))
-	add(blocks,build_blk(18,-21))
-	
-	--[[
-	add(blocks,build_blk(4,-20))
-	add(blocks,build_blk(11,-20))
-	add(blocks,build_blk(18,-20))
-	add(blocks,build_blk(25,-20))
-	add(blocks,build_blk(32,-20))
-	add(blocks,build_blk(39,-20))
-	add(blocks,build_blk(46,-20))
-	add(blocks,build_blk(53,-20))
-	add(blocks,build_blk(60,-20))
-	add(blocks,build_blk(67,-20))
-	]]--
+	for b in all(pc) do
+			add(blocks,build_blk(b.x,b.y))
+	end 
 	
 	return blocks
 end
@@ -119,11 +104,11 @@ end
 -->8
 --utils
 function block_types()
-	local b_map={}
+	local bm={}
 	
-	for x=25,39,7 do
-		for y=-42,-14,7 do
-			add(b_map,{x=x, y=y})
+	for y=-42,-14,7 do
+		for x=25,39,7 do
+			add(bm,{x=x, y=y})
 		end
 	end
 	
@@ -137,7 +122,15 @@ function block_types()
 	
 	]]--
 	
-	local b_types={}
+	local b_types={
+		{bm[8],bm[9],bm[11],bm[12]},
+		{bm[2],bm[5],bm[8],bm[11]},
+		{bm[10],bm[11],bm[8],bm[9]},
+		{bm[7],bm[8],bm[11],bm[12]},
+		{bm[5],bm[8],bm[11],bm[12]},
+		{bm[5],bm[8],bm[11],bm[10]},
+		{bm[10],bm[8],bm[11],bm[12]}
+	}
 	
 	return b_types
 end
