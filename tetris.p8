@@ -8,7 +8,9 @@ function _init()
 		ma_tly=3,
 		ma_brx=74,
 		ma_bry=124,
-		col=flr(rnd(15))
+		--col=flr(rnd(15))
+		col=0,
+		txt_col=7
 	}
 	
 	lvl=0
@@ -23,7 +25,7 @@ function _init()
 	tts_x_spd=0
 	tts_y_spd=0
 	
-	nxt_pc=rnd_tts()
+	actual_tts=rnd_tts()
 end
 
 function _update()
@@ -31,21 +33,20 @@ function _update()
 	tts_x_spd=0
 	tts_y_spd=0
 
-	read_constrols(nxt_pc)
-	animate_tetris(nxt_pc)
+	read_constrols(actual_tts)
+	animate_tetris(actual_tts)
 end
 
 function _draw()
-	if ui_col!=0 then
+	if ui.col!=0 then
 		cls(0)
 	else
 		cls(6)
+		ui.txt_col=5
 	end
 	
-	draw_tetris(nxt_pc)
+	draw_tetris(actual_tts)
 	draw_ui()
-	print(nxt_pc.x)
-	print(nxt_pc.b[1].tlx)
 end
 -->8
 --update
@@ -90,20 +91,31 @@ function draw_ui()
 	
 	print("level:",82,70,ui.col)
 	rect(82,76,121,84,ui.col)
-	print(lvl,84,78,7)
+	print(lvl,84,78,ui.txt_col)
 	
 	print("score:",82,90,ui.col)
 	rect(82,96,121,104,ui.col)
-	print(score,84,98,7)
+	print(score,84,98,ui.txt_col)
 end
 
 function draw_tetris(tts)
 		for b in all(tts.b) do
+		if (ui.col==0) tts.o_col=5
+		
 		rect(
 			b.tlx+tts.x,
 			b.tly+tts.y,
 			b.brx+tts.x,
-			b.bry+tts.y
+			b.bry+tts.y,
+			tts.o_col
+		)
+		
+		rectfill(
+			b.tlx+tts.x+1,
+			b.tly+tts.y+1,
+			b.brx+tts.x-1,
+			b.bry+tts.y-1,
+			tts.t.c
 		)
 	end
 end
@@ -186,13 +198,13 @@ function rnd_btype()
 	]]--
 	
 	local b_types={
-		{h=14,w=14,m={bm[1],bm[2],bm[4],bm[5]}},
-		{h=28,w=7,m={bm[1],bm[4],bm[7],bm[10]}},
-		{h=14,w=21,m={bm[2],bm[3],bm[4],bm[5]}},
-		{h=14,w=21,m={bm[1],bm[2],bm[5],bm[6]}},
-		{h=21,w=14,m={bm[1],bm[4],bm[7],bm[8]}},
-		{h=21,w=14,m={bm[2],bm[5],bm[7],bm[8]}},
-		{h=14,w=21,m={bm[2],bm[4],bm[5],bm[6]}}
+		{c=8,h=14,w=14,m={bm[1],bm[2],bm[4],bm[5]}},
+		{c=9,h=28,w=7,m={bm[1],bm[4],bm[7],bm[10]}},
+		{c=10,h=14,w=21,m={bm[2],bm[3],bm[4],bm[5]}},
+		{c=11,h=14,w=21,m={bm[1],bm[2],bm[5],bm[6]}},
+		{c=12,h=21,w=14,m={bm[1],bm[4],bm[7],bm[8]}},
+		{c=13,h=21,w=14,m={bm[2],bm[5],bm[7],bm[8]}},
+		{c=14,h=14,w=21,m={bm[2],bm[4],bm[5],bm[6]}}
 	}
 	
 	return b_types[flr(rnd(6)+1)]
@@ -209,6 +221,8 @@ function rnd_tts()
 	tts.b={}
 	tts.h=t.h
 	tts.w=t.w
+	tts.t=t
+	tts.o_col=7
 	
 	for b in all(t.m) do
 		add(tts.b,build_blk(b))
