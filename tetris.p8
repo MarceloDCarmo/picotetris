@@ -8,8 +8,7 @@ function _init()
 		ma_tly=3,
 		ma_brx=74,
 		ma_bry=124,
-		--col=flr(rnd(15))
-		col=0,
+		col=flr(rnd(15)),
 		txt_col=7
 	}
 	
@@ -19,13 +18,16 @@ function _init()
 	--tetris info
 	init_x=32
 	init_y=-42
+	lst_t=nil
+	placed_tts={}
 	
 	--speed
 	main_spd=1
 	tts_x_spd=0
 	tts_y_spd=0
 	
-	actual_tts=rnd_tts()
+	act_tts=rnd_tts()
+	nxt_tts=rnd_tts()
 end
 
 function _update()
@@ -33,8 +35,13 @@ function _update()
 	tts_x_spd=0
 	tts_y_spd=0
 
-	read_constrols(actual_tts)
-	animate_tetris(actual_tts)
+	if act_tts.act==false then
+		act_tts=nxt_tts
+		nxt_tts=rnd_tts()
+	end
+
+	read_constrols(act_tts)
+	animate_tetris(act_tts)
 end
 
 function _draw()
@@ -45,7 +52,12 @@ function _draw()
 		ui.txt_col=5
 	end
 	
-	draw_tetris(actual_tts)
+	for tts in all(placed_tts) do
+		draw_tts(tts)
+	end
+	
+	draw_tts(nxt_tts,true)
+	draw_tts(act_tts,false)
 	draw_ui()
 end
 -->8
@@ -54,18 +66,22 @@ function animate_tetris(tts)
 	local spd_y=main_spd+tts_y_spd
 	local spd_x=tts_x_spd
 	
-	tts.x+=spd_x
-	tts.y+=spd_y
-	
-	--check for edge collision
-	if (tts.x<ui.ma_tlx) then
-	 tts.x=ui.ma_tlx+1
-	end
-	if (tts.x+tts.w>ui.ma_brx) then
-		tts.x=ui.ma_brx-tts.w
-	end
-	if (tts.y+tts.h>ui.ma_bry) then
-		tts.y=ui.ma_bry-tts.h
+	if tts.act then
+		tts.x+=spd_x
+		tts.y+=spd_y
+		
+		--check for edge collision
+		if (tts.x<ui.ma_tlx) then
+		 tts.x=ui.ma_tlx+1
+		end
+		if (tts.x+tts.w>ui.ma_brx) then
+			tts.x=ui.ma_brx-tts.w
+		end
+		if (tts.y+tts.h>ui.ma_bry) then
+			tts.y=ui.ma_bry-tts.h
+			tts.act=false
+			add(placed_tts,act_tts)
+		end
 	end
 end
 
@@ -78,10 +94,14 @@ end
 -->8
 --draw
 function draw_ui()
+	--outer border
 	rect(0,0,127,127,ui.col)
-	rect(79,3,124,124,ui.col)
+	--side pannel
+	rect(76,3,124,124,ui.col)
+	--main area
 	rect(ui.ma_tlx,ui.ma_tly,ui.ma_brx,ui.ma_bry,ui.col)
-	rect(82,6,121,44,ui.col)
+	--next tetris area
+	rect(79,6,121,46,ui.col)
 	
 	--hack to hide tetris
 	--at the top of screen
@@ -89,18 +109,30 @@ function draw_ui()
 	if (ui.col==0) hack_col=6
 	rect(1,1,126,2,hack_col)
 	
-	print("level:",82,70,ui.col)
-	rect(82,76,121,84,ui.col)
-	print(lvl,84,78,ui.txt_col)
+	--level
+	print("level:",79,70,ui.col)
+	rect(79,76,121,84,ui.col)
+	print(lvl,81,78,ui.txt_col)
 	
-	print("score:",82,90,ui.col)
-	rect(82,96,121,104,ui.col)
-	print(score,84,98,ui.txt_col)
+	--score
+	print("score:",79,90,ui.col)
+	rect(79,96,121,104,ui.col)
+	print(score,81,98,ui.txt_col)
 end
 
-function draw_tetris(tts)
+function draw_tts(tts,nxt)
 		for b in all(tts.b) do
 		if (ui.col==0) tts.o_col=5
+		
+		local act_x
+		local act_y
+		
+		if nxt then
+			act_x=tts.x
+			act_y=tts.y
+			tts.x=86
+			tts.y=12
+		end
 		
 		rect(
 			b.tlx+tts.x,
@@ -117,6 +149,11 @@ function draw_tetris(tts)
 			b.bry+tts.y-1,
 			tts.t.c
 		)
+		
+		if nxt then
+			tts.x=act_x
+			tts.y=act_y
+		end
 	end
 end
 -->8
@@ -217,48 +254,25 @@ function rnd_tts()
 	}
 	
 	local t=rnd_btype()
+	--prevents tetris same type in sequence
+	while t.c==lst_t do
+		t=rnd_btype()
+	end
 	
 	tts.b={}
 	tts.h=t.h
 	tts.w=t.w
 	tts.t=t
-	tts.o_col=7
+	tts.o_col=5
+	tts.act=true
 	
 	for b in all(t.m) do
 		add(tts.b,build_blk(b))
 	end
 
+	lst_t=tts.t.c
 	return tts
 end
--->8
---[[
-	local aux=true
-	local height={28,28,28,21,21,21,14,14,14,7,7,7}
-
-	for blk in all(tetris.b) do
-		if blk.p>=10 and blk.p<=12 then
-			if blk.tly+7<124 then
-				blk.tlx+=tts_x_spd
-				blk.tly+=spd_y
-				blk.brx+=tts_x_spd
-				blk.bry+=spd_y
-			else
-				blk.tly=124-height[blk.p]
-				blk.bry=blk.tly+6
-				aux=false
-			end
-		else
-			if aux==true then
-				blk.tlx+=tts_x_spd
-				blk.tly+=spd_y
-				blk.brx+=tts_x_spd
-				blk.bry+=spd_y
-			else
-				blk.tly=124-height[blk.p]
-				blk.bry=blk.tly+6
-			end
-		end
-	end]]
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
