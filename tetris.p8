@@ -17,12 +17,13 @@ function _init()
 	
 	--tetris info
 	init_x=32
-	init_y=-42
+	init_y=-38
 	lst_t=nil
 	placed_tts={}
 	
 	--speed
-	main_spd=1
+	timer=30
+	main_spd=7
 	tts_x_spd=0
 	tts_y_spd=0
 	
@@ -68,7 +69,13 @@ function animate_tetris(tts)
 	
 	if tts.act then
 		tts.x+=spd_x
-		tts.y+=spd_y
+		
+		if timer>0 then
+			timer-=1
+		else
+			tts.y+=spd_y
+			timer=15
+		end
 		
 		--check for edge collision
 		if (tts.x<ui.ma_tlx) then
@@ -86,8 +93,9 @@ function animate_tetris(tts)
 end
 
 function read_constrols(tetris)
-	if (btn(⬇️)) tts_y_spd+=2
-	if (btn(⬆️)) tts_y_spd-=0.5
+	--if (btn(⬇️)) tts_y_spd+=2
+	if (btn(⬇️)) timer-=10
+	--if (btn(⬆️)) tts_y_spd-=0.5
 	if (btnp(➡️))	tts_x_spd+=7
 	if (btnp(⬅️))	tts_x_spd-=7
 end
