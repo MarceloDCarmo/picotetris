@@ -7,7 +7,7 @@ function _init()
 		ma_tlx=3,
 		ma_tly=3,
 		ma_brx=74,
-		ma_bry=124,
+		ma_bry=123,
 		col=flr(rnd(15)),
 		txt_col=7
 	}
@@ -97,7 +97,7 @@ function draw_ui()
 	--outer border
 	rect(0,0,127,127,ui.col)
 	--side pannel
-	rect(76,3,124,124,ui.col)
+	rect(76,3,124,123,ui.col)
 	--main area
 	rect(ui.ma_tlx,ui.ma_tly,ui.ma_brx,ui.ma_bry,ui.col)
 	--next tetris area
