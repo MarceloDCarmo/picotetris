@@ -2,6 +2,10 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 function _init()
+	--main area matrix
+	ma=init_ma()
+	tts=new_tts()
+
 	--ui info
 	ui={
 		ma_tlx=3,
@@ -15,34 +19,10 @@ function _init()
 	lvl=0
 	score=0
 	
-	--tetris info
-	init_x=32
-	init_y=-38
-	lst_t=nil
-	placed_tts={}
-	
-	--speed
-	timer=30
-	main_spd=7
-	tts_x_spd=0
-	tts_y_spd=0
-	
-	act_tts=rnd_tts()
-	nxt_tts=rnd_tts()
+	timer=15
 end
 
 function _update()
-	--reset speed
-	tts_x_spd=0
-	tts_y_spd=0
-
-	if act_tts.act==false then
-		act_tts=nxt_tts
-		nxt_tts=rnd_tts()
-	end
-
-	read_constrols(act_tts)
-	animate_tetris(act_tts)
 end
 
 function _draw()
@@ -52,52 +32,65 @@ function _draw()
 		cls(6)
 		ui.txt_col=5
 	end
-	
-	for tts in all(placed_tts) do
-		draw_tts(tts)
+
+	for b in all(tts) do
+		set_act(b.r,b.c,false)
 	end
 	
-	draw_tts(nxt_tts,true)
-	draw_tts(act_tts,false)
+	read_ctrls(tts)
+
+	if timer>0 then
+		timer-=1
+	else
+		if tts.b+1<=#ma then
+			for b in all(tts) do
+				b.r+=1
+			end
+			tts.b+=1
+			timer=15
+		end
+	end
+	
+	for b in all(tts) do
+		set_act(b.r,b.c,true)
+	end
+	
+	for i=1,#ma do
+		for j=1,#ma[i] do
+			if ma[i][j].a then
+				draw_blk(i,j,tts.col)
+			end
+		end
+	end
+	
 	draw_ui()
 end
 -->8
 --update
-function animate_tetris(tts)
-	local spd_y=main_spd+tts_y_spd
-	local spd_x=tts_x_spd
+function read_ctrls(tts)
+	if (btn(⬇️)) then
+		timer-=5
+	end
 	
-	if tts.act then
-		tts.x+=spd_x
-		
-		if timer>0 then
-			timer-=1
-		else
-			tts.y+=spd_y
-			timer=15
+	if (btnp(➡️) and tts.r+1<=10)	then
+		for b in all(tts) do
+			b.c+=1
 		end
-		
-		--check for edge collision
-		if (tts.x<ui.ma_tlx) then
-		 tts.x=ui.ma_tlx+1
+		tts.r+=1
+		tts.l+=1
+	end
+	
+	if (btnp(⬅️) and tts.l-1>=1)	then
+		for b in all(tts) do
+			b.c-=1
 		end
-		if (tts.x+tts.w>ui.ma_brx) then
-			tts.x=ui.ma_brx-tts.w
-		end
-		if (tts.y+tts.h>ui.ma_bry) then
-			tts.y=ui.ma_bry-tts.h
-			tts.act=false
-			add(placed_tts,act_tts)
-		end
+		tts.r-=1
+		tts.l-=1
 	end
 end
 
-function read_constrols(tetris)
-	--if (btn(⬇️)) tts_y_spd+=2
-	if (btn(⬇️)) timer-=10
-	--if (btn(⬆️)) tts_y_spd-=0.5
-	if (btnp(➡️))	tts_x_spd+=7
-	if (btnp(⬅️))	tts_x_spd-=7
+function set_act(r,c,act)
+	ma[r][c].a=act
 end
 -->8
 --draw
@@ -128,85 +121,36 @@ function draw_ui()
 	print(score,81,98,ui.txt_col)
 end
 
-function draw_tts(tts,nxt)
-		for b in all(tts.b) do
-		if (ui.col==0) tts.o_col=5
-		
-		local act_x
-		local act_y
-		
-		if nxt then
-			act_x=tts.x
-			act_y=tts.y
-			tts.x=86
-			tts.y=12
-		end
-		
-		rect(
-			b.tlx+tts.x,
-			b.tly+tts.y,
-			b.brx+tts.x,
-			b.bry+tts.y,
-			tts.o_col
-		)
-		
-		rectfill(
-			b.tlx+tts.x+1,
-			b.tly+tts.y+1,
-			b.brx+tts.x-1,
-			b.bry+tts.y-1,
-			tts.t.c
-		)
-		
-		if nxt then
-			tts.x=act_x
-			tts.y=act_y
-		end
-	end
+function draw_blk(r,c,col)
+	local x=ma[r][c].x
+	local y=ma[r][c].y
+	
+	--rect(x,y,x+6,y+6)
+	spr(col,x,y)
 end
 -->8
---collision
-function blk_hit(b1,b2)
-  local w1=7
-  local w2=7
-  local h1=7
-  local h2=7
-  
-  hit=false
-  local xd=abs((b1.x+(w1/2))-(b2.x+(w2/2)))
-  local xs=w1*0.5+w2*0.5
-  local yd=abs((b1.y+(h1/2))-(b2.y+(h2/2)))
-  local ys=h1/2+h2/2
-  if xd<xs and 
-     yd<ys then 
-    hit=true 
-  end
-  
-  return hit
-end
+--init
+function init_ma()
+	local ma={}
+	local ox=4 --offset x
+	local oy=-24 --offset y
+	local bs=7 --block side
 
-function border_collision(tetris)
- local t_left=tetris.x
- local t_top=tetris.y
- local t_right=t_left+tetris.w
- local t_bottom=t_top+tetris.h
- 
- local b_left=ui.ma_tlx+2
- local b_top=ui.ma_tly
- local b_right=ui.ma_brx-1
- local b_bottom=ui.ma_bry-1
-
- if t_left<b_left then
-		return true
- elseif	t_right>b_right then
- 	return true
- end
- 
- if t_bottom>b_bottom then
-		tts_y_spd=0
-		main_spd=0
+	for r=0,20 do
+		ma[r+1]={}
+		for c=0,9 do
+			ma[r+1][c+1]={
+				x=c*bs+ox,
+				y=r*bs+oy,
+				a=false
+			}
+		end
 	end
+	
+	return ma
 end
+
+
 -->8
 --tetris
 function build_blk(b)
@@ -281,10 +225,88 @@ function rnd_tts()
 	lst_t=tts.t.c
 	return tts
 end
+-->8
+--tetris matrix
+function new_tts()
+		--[[
+	coordinates to blocks
+	
+	1,1 | 1,2 | 1,3 | 1,4
+	----------------------
+	2,1 | 2,2 | 2,3 | 2,4
+	----------------------
+	3,1 | 3,2 | 3,3 | 3,4
+	----------------------
+	4,1 | 4,2 | 4,3 | 4,4
+	
+	]]--
+	
+	local types={
+		--t
+		{
+			l=4,r=6,t=3,b=4,col=1,
+			{r=4,c=4},
+			{r=4,c=5},
+			{r=4,c=6},
+			{r=3,c=5}
+		},
+		--s
+		{
+			l=4,r=6,t=3,b=4,col=2,
+			{r=4,c=4},
+			{r=4,c=5},
+			{r=3,c=5},
+			{r=3,c=6}
+		},
+		--i
+		{
+			l=5,r=5,t=1,b=4,col=3,
+			{r=4,c=5},
+			{r=3,c=5},
+			{r=2,c=5},
+			{r=1,c=5}
+		},
+		--z
+		{
+			l=4,r=6,t=3,b=4,col=4,
+			{r=3,c=4},
+			{r=3,c=5},
+			{r=4,c=5},
+			{r=4,c=6}
+		},
+		--o
+		{
+			l=5,r=6,t=3,b=4,col=5,
+			{r=4,c=5},
+			{r=4,c=6},
+			{r=3,c=5},
+			{r=3,c=6}
+		},
+		--l
+		{
+			l=5,r=6,t=2,b=4,col=6,
+			{r=2,c=5},
+			{r=3,c=5},
+			{r=4,c=5},
+			{r=4,c=6}
+		},
+		--j
+		{
+			l=5,r=6,t=2,b=4,col=7,
+			{r=2,c=6},
+			{r=3,c=6},
+			{r=4,c=6},
+			{r=4,c=5}
+		}
+	}
+	
+	return types[flr(rnd(#types)+1)]
+end
 __gfx__
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000088888880bbbbbbb0ccccccc0aaaaaaa0eeeeeee044444440666666600000000000000000000000000000000000000000000000000000000000000000
+000000008eeeee80b33333b0c11111c0a99999a0e22222e04fffff40655555600000000000000000000000000000000000000000000000000000000000000000
+007007008e888e80b3bbb3b0c1ccc1c0a9aaa9a0e2eee2e04f444f40656665600000000000000000000000000000000000000000000000000000000000000000
+000770008e808e80b3b0b3b0c1c0c1c0a9a0a9a0e2e0e2e04f404f40656065600000000000000000000000000000000000000000000000000000000000000000
+000770008e888e80b3bbb3b0c1ccc1c0a9aaa9a0e2eee2e04f444f40656665600000000000000000000000000000000000000000000000000000000000000000
+007007008eeeee80b33333b0c11111c0a99999a0e22222e04fffff40655555600000000000000000000000000000000000000000000000000000000000000000
+0000000088888880bbbbbbb0ccccccc0aaaaaaa0eeeeeee044444440666666600000000000000000000000000000000000000000000000000000000000000000
