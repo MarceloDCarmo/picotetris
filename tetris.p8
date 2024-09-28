@@ -1,10 +1,22 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
+--[[
+in order to make the new tetris
+work, i need to create new objects
+]]
 function _init()
 	--main area matrix
 	ma=init_ma()
-	tts=new_tts()
+	--next tts area
+	na=init_na()
+	--initi types
+	types=init_types()
+	--controls when to call next tts
+	call_nxt=false
+	
+	act_tts=new_tts()
+	nxt_tts=new_tts()
 
 	--ui info
 	ui={
@@ -23,6 +35,14 @@ function _init()
 end
 
 function _update()
+	if call_next then
+		act_tts.blks=nxt_tts.blks
+		--nxt_tts=new_tts()
+		call_nxt=false
+	end
+
+	upd_nxt_tts(nxt_tts)
+	upd_act_tts(act_tts)
 end
 
 function _draw()
@@ -32,37 +52,12 @@ function _draw()
 		cls(6)
 		ui.txt_col=5
 	end
-
-	for b in all(tts) do
-		set_act(b.r,b.c,false)
-	end
 	
-	read_ctrls(tts)
-
-	if timer>0 then
-		timer-=1
-	else
-		if tts.b+1<=#ma then
-			for b in all(tts) do
-				b.r+=1
-			end
-			tts.b+=1
-			timer=15
-		end
-	end
+	--draw next tts
+	draw_tts(na,nxt_tts)
 	
-	for b in all(tts) do
-		set_act(b.r,b.c,true)
-	end
-	
-	for i=1,#ma do
-		for j=1,#ma[i] do
-			if ma[i][j].a then
-				draw_blk(i,j,tts.col)
-			end
-		end
-	end
-	
+	--draw active tts
+	draw_tts(ma,act_tts)	
 	draw_ui()
 end
 -->8
@@ -73,7 +68,7 @@ function read_ctrls(tts)
 	end
 	
 	if (btnp(➡️) and tts.r+1<=10)	then
-		for b in all(tts) do
+		for b in all(tts.blks) do
 			b.c+=1
 		end
 		tts.r+=1
@@ -81,7 +76,7 @@ function read_ctrls(tts)
 	end
 	
 	if (btnp(⬅️) and tts.l-1>=1)	then
-		for b in all(tts) do
+		for b in all(tts.blks) do
 			b.c-=1
 		end
 		tts.r-=1
@@ -89,8 +84,44 @@ function read_ctrls(tts)
 	end
 end
 
-function set_act(r,c,act)
-	ma[r][c].a=act
+function set_act(a,r,c,act)
+	a[r][c].a=act
+end
+
+function upd_act_tts(tts)
+	for b in all(tts.blks) do
+		set_act(ma,b.r,b.c,false)
+	end
+	
+	read_ctrls(tts)
+
+	if timer>0 then
+		timer-=1
+	else
+		if tts.b+1<=#ma then
+			for b in all(tts.blks) do
+				b.r+=1
+			end
+			tts.b+=1
+			timer=15
+		else
+			while true do
+				call_nxt=true
+			end
+		end
+	end
+	
+	for b in all(tts.blks) do
+		set_act(ma,b.r,b.c,true)
+	end
+end
+
+function upd_nxt_tts(tts)	
+	for b in all(tts.blks) do
+		b.c-=3
+		set_act(na,b.r,b.c,true)
+		b.c+=3
+	end
 end
 -->8
 --draw
@@ -102,7 +133,7 @@ function draw_ui()
 	--main area
 	rect(ui.ma_tlx,ui.ma_tly,ui.ma_brx,ui.ma_bry,ui.col)
 	--next tetris area
-	rect(79,6,121,46,ui.col)
+	rect(79,6,121,47,ui.col)
 	
 	--hack to hide tetris
 	--at the top of screen
@@ -121,15 +152,26 @@ function draw_ui()
 	print(score,81,98,ui.txt_col)
 end
 
-function draw_blk(r,c,col)
-	local x=ma[r][c].x
-	local y=ma[r][c].y
+function draw_blk(a,r,c,col)
+	local x=a[r][c].x
+	local y=a[r][c].y
 	
-	--rect(x,y,x+6,y+6)
 	spr(col,x,y)
+end
+
+function draw_tts(a,tts)
+	for i=1,#a do
+		for j=1,#a[i] do
+			if a[i][j].a then
+				draw_blk(a,i,j,tts.col)
+			end
+		end
+	end
 end
 -->8
 --init
+
+--init main area
 function init_ma()
 	local ma={}
 	local ox=4 --offset x
@@ -148,6 +190,27 @@ function init_ma()
 	end
 	
 	return ma
+end
+
+--init next tetris area
+function init_na()
+	local na={}
+	local ox=86 --offset x
+	local oy=13 --offset y
+	local bs=7 --block side
+
+	for r=0,3 do
+		na[r+1]={}
+		for c=0,3 do
+			na[r+1][c+1]={
+				x=c*bs+ox,
+				y=r*bs+oy,
+				a=false
+			}
+		end
+	end
+	
+	return na
 end
 
 
@@ -227,79 +290,82 @@ function rnd_tts()
 end
 -->8
 --tetris matrix
-function new_tts()
-		--[[
-	coordinates to blocks
-	
-	1,1 | 1,2 | 1,3 | 1,4
-	----------------------
-	2,1 | 2,2 | 2,3 | 2,4
-	----------------------
-	3,1 | 3,2 | 3,3 | 3,4
-	----------------------
-	4,1 | 4,2 | 4,3 | 4,4
-	
-	]]--
-	
-	local types={
+function init_types()
+	return {
 		--t
 		{
 			l=4,r=6,t=3,b=4,col=1,
-			{r=4,c=4},
-			{r=4,c=5},
-			{r=4,c=6},
-			{r=3,c=5}
+			blks={
+				{r=4,c=4},
+				{r=4,c=5},
+				{r=4,c=6},
+				{r=3,c=5}
+			}
 		},
 		--s
 		{
 			l=4,r=6,t=3,b=4,col=2,
-			{r=4,c=4},
-			{r=4,c=5},
-			{r=3,c=5},
-			{r=3,c=6}
+			blks={
+				{r=4,c=4},
+				{r=4,c=5},
+				{r=3,c=5},
+				{r=3,c=6}
+			}
 		},
 		--i
 		{
 			l=5,r=5,t=1,b=4,col=3,
-			{r=4,c=5},
-			{r=3,c=5},
-			{r=2,c=5},
-			{r=1,c=5}
+			blks={
+				{r=4,c=5},
+				{r=3,c=5},
+				{r=2,c=5},
+				{r=1,c=5}
+			}
 		},
 		--z
 		{
 			l=4,r=6,t=3,b=4,col=4,
-			{r=3,c=4},
-			{r=3,c=5},
-			{r=4,c=5},
-			{r=4,c=6}
+			blks={
+				{r=3,c=4},
+				{r=3,c=5},
+				{r=4,c=5},
+				{r=4,c=6}
+			}
 		},
 		--o
 		{
 			l=5,r=6,t=3,b=4,col=5,
-			{r=4,c=5},
-			{r=4,c=6},
-			{r=3,c=5},
-			{r=3,c=6}
+			blks={
+				{r=4,c=5},
+				{r=4,c=6},
+				{r=3,c=5},
+				{r=3,c=6}
+			}
 		},
 		--l
 		{
 			l=5,r=6,t=2,b=4,col=6,
-			{r=2,c=5},
-			{r=3,c=5},
-			{r=4,c=5},
-			{r=4,c=6}
+			blks={
+				{r=2,c=5},
+				{r=3,c=5},
+				{r=4,c=5},
+				{r=4,c=6}
+			}
 		},
 		--j
 		{
 			l=5,r=6,t=2,b=4,col=7,
-			{r=2,c=6},
-			{r=3,c=6},
-			{r=4,c=6},
-			{r=4,c=5}
+			blks={
+				{r=2,c=6},
+				{r=3,c=6},
+				{r=4,c=6},
+				{r=4,c=5}
+			}
 		}
 	}
-	
+end
+
+function new_tts()
 	return types[flr(rnd(#types)+1)]
 end
 __gfx__
