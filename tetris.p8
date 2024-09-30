@@ -35,9 +35,9 @@ function _init()
 end
 
 function _update()
-	if call_next then
-		act_tts.blks=nxt_tts.blks
-		--nxt_tts=new_tts()
+	if call_nxt then
+		act_tts=nxt_tts
+		nxt_tts=new_tts()
 		call_nxt=false
 	end
 
@@ -105,9 +105,7 @@ function upd_act_tts(tts)
 			tts.b+=1
 			timer=15
 		else
-			while true do
-				call_nxt=true
-			end
+			call_nxt=true
 		end
 	end
 	
@@ -216,80 +214,6 @@ end
 
 -->8
 --tetris
-function build_blk(b)
-	return {
-		tlx=b.ox,
-		tly=b.oy,
-		brx=b.ox+6,
-		bry=b.oy+6,
-		p=b.p
-	}
-end
-
-function rnd_btype()
-	local bm={}
-	
-	for y=0,21,7 do
-		for x=0,14,7 do
-			add(bm,{ox=x,oy=y})
-		end
-	end
-	
-	for i=1,#bm do
-		bm[i].p=i
-	end
-	
-		--[[
-	coordinates to blocks
-	
-	b1 |b2 |b3
-	b4 |b5 |b6
-	b7 |b8 |b9
-	b10|b11|b12
-	
-	]]--
-	
-	local b_types={
-		{c=8,h=14,w=14,m={bm[1],bm[2],bm[4],bm[5]}},
-		{c=9,h=28,w=7,m={bm[1],bm[4],bm[7],bm[10]}},
-		{c=10,h=14,w=21,m={bm[2],bm[3],bm[4],bm[5]}},
-		{c=11,h=14,w=21,m={bm[1],bm[2],bm[5],bm[6]}},
-		{c=12,h=21,w=14,m={bm[1],bm[4],bm[7],bm[8]}},
-		{c=13,h=21,w=14,m={bm[2],bm[5],bm[7],bm[8]}},
-		{c=14,h=14,w=21,m={bm[2],bm[4],bm[5],bm[6]}}
-	}
-	
-	return b_types[flr(rnd(6)+1)]
-end
-
-function rnd_tts()
-	local tts={
-		x=init_x,
-		y=init_y
-	}
-	
-	local t=rnd_btype()
-	--prevents tetris same type in sequence
-	while t.c==lst_t do
-		t=rnd_btype()
-	end
-	
-	tts.b={}
-	tts.h=t.h
-	tts.w=t.w
-	tts.t=t
-	tts.o_col=5
-	tts.act=true
-	
-	for b in all(t.m) do
-		add(tts.b,build_blk(b))
-	end
-
-	lst_t=tts.t.c
-	return tts
-end
--->8
---tetris matrix
 function init_types()
 	return {
 		--t
